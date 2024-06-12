@@ -1,0 +1,15 @@
+[project]
+name = "uistuff"
+version = "0.1.0"
+description = "Add a short description here"
+authors = ["Rahul Dave <rahuldave@gmail.com>"]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+[tasks]
+
+[dependencies]
+python = ">=3.12.3,<3.13"
+flask = ">=3.0.3,<3.1"
+flask-cors = ">=4.0.0,<4.1"
+openai = ">=1.33.0,<1.34"

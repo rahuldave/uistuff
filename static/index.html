@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Chatbot Interface</title>
+        <script
+            src="https://cdn.jsdelivr.net/npm/alpinejs@3.2.3/dist/cdn.min.js"
+            defer
+        ></script>
+        <link
+            href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+            rel="stylesheet"
+        />
+    </head>
+    <body class="bg-gray-100 p-6" x-data="chatApp()" x-init="checkSession()">
+        <nav
+            class="bg-blue-500 p-4 text-white mb-4 flex justify-between items-center"
+        >
+            <div class="flex items-center">
+                <h1 class="text-2xl font-bold mr-4">Chatbot</h1>
+                <button
+                    @click="createConversation()"
+                    class="ml-4 text-white bg-green-500 p-2 rounded-full"
+                    x-show="loggedIn"
+                >
+                    NEW CONVERSATION
+                </button>
+            </div>
+            <div>
+                <template x-if="loggedIn">
+                    <div>
+                        <span class="mr-4"
+                            >Welcome, <span x-text="username"></span
+                        ></span>
+                        <a
+                            href="#"
+                            @click.prevent="logout"
+                            class="hover:underline"
+                            >Logout</a
+                        >
+                    </div>
+                </template>
+                <template x-if="!loggedIn">
+                    <div>
+                        <a
+                            href="#"
+                            @click.prevent="showLoginForm = true"
+                            class="hover:underline mr-4"
+                            >Login</a
+                        >
+                        <a
+                            href="#"
+                            @click.prevent="showRegisterForm = true"
+                            class="hover:underline"
+                            >Register</a
+                        >
+                    </div>
+                </template>
+            </div>
+        </nav>
+
+        <div x-show="loggedIn">
+            <div class="flex">
+                <div class="w-1/4 bg-white p-4 rounded shadow mr-4">
+                    <h2 class="font-bold mb-2">Previous Conversations</h2>
+                    <ul>
+                        <template
+                            x-for="conversation in conversations"
+                            :key="conversation.id"
+                        >
+                            <li
+                                class="py-1 cursor-pointer hover:bg-gray-200"
+                                @click="selectConversation(conversation.id)"
+                                x-text="conversation.title"
+                            ></li>
+                        </template>
+                    </ul>
+                </div>
+                <div class="w-3/4 bg-white p-4 rounded shadow">
+                    <div class="overflow-y-auto max-h-80 mb-4" id="chatBox">
+                        <template x-for="message in messages" :key="message.id">
+                            <div class="mb-4">
+                                <div
+                                    class="flex items-start"
+                                    :class="{'justify-end': message.user}"
+                                >
+                                    <div
+                                        class="bg-gray-200 p-2 rounded"
+                                        :class="{'bg-blue-200': message.user}"
+                                    >
+                                        <p x-text="message.text"></p>
+                                    </div>
+                                    <template x-if="!message.user">
+                                        <div class="ml-2 flex items-center">
+                                            <button
+                                                @click="toggleFeedback(message.id, 'like')"
+                                                class="mx-1"
+                                            >
+                                                <span
+                                                    :class="{
+                                                'text-green-500': message.feedback === 'like',
+                                                'text-black-500': message.feedback !== 'like' && message.feedback !== null
+                                            }"
+                                                    >(+)</span
+                                                >
+                                            </button>
+                                            <button
+                                                @click="toggleFeedback(message.id, 'dislike')"
+                                                class="mx-1"
+                                            >
+                                                <span
+                                                    :class="{
+                                                'text-red-500': message.feedback === 'dislike',
+                                                'text-black-500': message.feedback !== 'dislike' && message.feedback !== null
+                                            }"
+                                                    >(-)</span
+                                                >
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="flex">
+                        <textarea
+                            class="w-full p-2 border rounded"
+                            rows="3"
+                            x-model="newMessage"
+                            placeholder="Type a message..."
+                        ></textarea>
+                        <button
+                            @click="submitMessage"
+                            class="ml-2 px-4 py-2 bg-blue-500 text-white rounded"
+                        >
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Form Modal -->
+        <div
+            x-show="showRegisterForm"
+            class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center"
+        >
+            <div class="bg-white p-6 rounded shadow-md w-1/3">
+                <h2 class="text-xl font-bold mb-4">Register</h2>
+                <form @submit.prevent="register">
+                    <div class="mb-4">
+                        <label class="block text-gray-700">Username</label>
+                        <input
+                            type="text"
+                            x-model="registerForm.username"
+                            class="w-full p-2 border rounded"
+                        />
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700">Password</label>
+                        <input
+                            type="password"
+                            x-model="registerForm.password"
+                            class="w-full p-2 border rounded"
+                        />
+                    </div>
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            @click="showRegisterForm = false"
+                            class="mr-4 px-4 py-2 bg-gray-500 text-white rounded"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-blue-500 text-white rounded"
+                        >
+                            Register
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Login Form Modal -->
+        <div
+            x-show="showLoginForm"
+            class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center"
+        >
+            <div class="bg-white p-6 rounded shadow-md w-1/3">
+                <h2 class="text-xl font-bold mb-4">Login</h2>
+                <form @submit.prevent="login">
+                    <div class="mb-4">
+                        <label class="block text-gray-700">Username</label>
+                        <input
+                            type="text"
+                            x-model="loginForm.username"
+                            class="w-full p-2 border rounded"
+                        />
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700">Password</label>
+                        <input
+                            type="password"
+                            x-model="loginForm.password"
+                            class="w-full p-2 border rounded"
+                        />
+                    </div>
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            @click="showLoginForm = false"
+                            class="mr-4 px-4 py-2 bg-gray-500 text-white rounded"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-blue-500 text-white rounded"
+                        >
+                            Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener("alpine:init", () => {
+                Alpine.data("chatApp", () => ({
+                    messages: [],
+                    conversations: [],
+                    selectedConversation: "",
+                    newMessage: "",
+                    showRegisterForm: false,
+                    showLoginForm: false,
+                    loggedIn: false,
+                    username: "",
+                    registerForm: {
+                        username: "",
+                        password: "",
+                    },
+                    loginForm: {
+                        username: "",
+                        password: "",
+                    },
+                    init() {
+                        this.checkSession();
+                    },
+                    checkSession() {
+                        fetch("/api/session")
+                            .then((response) => response.json())
+                            .then((data) => {
+                                this.loggedIn = data.loggedIn;
+                                if (data.loggedIn) {
+                                    this.username = data.username;
+                                    this.fetchConversations();
+                                }
+                            });
+                    },
+                    fetchConversations() {
+                        fetch("/api/conversations")
+                            .then((response) => response.json())
+                            .then((data) => {
+                                this.conversations = data.conversations;
+                                if (this.conversations.length > 0) {
+                                    this.selectedConversation =
+                                        this.conversations[0].id;
+                                    this.fetchChats();
+                                }
+                            });
+                    },
+                    fetchChats() {
+                        if (!this.selectedConversation) return;
+                        fetch(`/api/conversations/${this.selectedConversation}`)
+                            .then((response) => response.json())
+                            .then((data) => {
+                                this.messages = data.chats.map((chat) => ({
+                                    id: chat.id,
+                                    text: chat.text,
+                                    user: chat.user_id !== 1, // Assuming 1 is the user ID for the bot
+                                    feedback: chat.feedback,
+                                }));
+                            });
+                    },
+                    submitMessage() {
+                        if (
+                            this.newMessage.trim() === "" ||
+                            !this.selectedConversation
+                        )
+                            return;
+                        this.messages.push({
+                            id: Date.now(),
+                            text: this.newMessage,
+                            user: true,
+                        });
+
+                        fetch("/api/chat", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                message: this.newMessage,
+                                conversationId: this.selectedConversation,
+                            }),
+                        })
+                            .then((response) => response.json())
+                            .then((data) => {
+                                this.messages.push({
+                                    id: data.id,
+                                    text: data.response,
+                                    user: false,
+                                });
+                            });
+
+                        this.newMessage = "";
+                    },
+                    toggleFeedback(messageId, feedbackType) {
+                        const message = this.messages.find(
+                            (msg) => msg.id === messageId,
+                        );
+                        const newFeedback =
+                            message.feedback === feedbackType
+                                ? null
+                                : feedbackType;
+                        message.feedback = newFeedback;
+
+                        fetch("/api/feedback", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                messageId,
+                                feedback: newFeedback,
+                            }),
+                        })
+                            .then((response) => response.json())
+                            .then((data) => console.log(data));
+                    },
+                    register() {
+                        fetch("/api/register", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(this.registerForm),
+                        }).then((response) => {
+                            if (response.ok) {
+                                this.showRegisterForm = false;
+                                alert("Registration successful");
+                            } else {
+                                alert("Registration failed");
+                            }
+                        });
+                    },
+                    login() {
+                        fetch("/api/login", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(this.loginForm),
+                        })
+                            .then((response) => response.json())
+                            .then((data) => {
+                                if (data.status === "success") {
+                                    this.showLoginForm = false;
+                                    this.loggedIn = true;
+                                    this.username = this.loginForm.username;
+                                    this.fetchConversations();
+                                } else {
+                                    alert("Login failed");
+                                }
+                            });
+                    },
+                    logout() {
+                        fetch("/api/logout", {
+                            method: "POST",
+                        }).then((response) => {
+                            if (response.ok) {
+                                this.loggedIn = false;
+                                this.username = "";
+                                this.messages = [];
+                                this.conversations = [];
+                            }
+                        });
+                    },
+                    createConversation() {
+                        const title = prompt(
+                            "Enter a title for the new conversation:",
+                        );
+                        if (title) {
+                            fetch("/api/conversations", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ title }),
+                            })
+                                .then((response) => response.json())
+                                .then((data) => {
+                                    this.conversations.push({
+                                        id: data.id,
+                                        title: data.title,
+                                    });
+                                    this.selectedConversation = data.id;
+                                    this.messages = [];
+                                });
+                        }
+                    },
+                    selectConversation(conversationId) {
+                        this.selectedConversation = conversationId;
+                        this.fetchChats();
+                    },
+                }));
+            });
+        </script>
+    </body>
+</html>
